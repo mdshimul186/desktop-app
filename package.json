@@ -63,7 +63,7 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "icon": "/src/assets/logoSquare.png",
+      "icon": "../src/assets/logoSquare.png",
       "hardenedRuntime": true,
       "gatekeeperAssess": false
     },

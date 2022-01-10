@@ -156,16 +156,18 @@ app.on('activate', () => {
 
 // Log both at dev console and at running node console instance
 function logDeepLink(urls) {
-  //console.log(urls)
-  let url = urls.find(u=>u.startsWith("ts4u-app://"))
-  let token = url.replace("ts4u-app://","")
-  if(token){
-    win.webContents
-    .executeJavaScript(`localStorage.setItem("token","Bearer ${token.replace("/","")}");`, true)
-    .then(result => {
-      win.reload()
-    });
+  if(urls){
+    let url = urls.find(u=>u.startsWith("ts4u-app://"))
+    let token = url.replace("ts4u-app://","")
+    if(token){
+      win.webContents
+      .executeJavaScript(`localStorage.setItem("token","Bearer ${token.replace("/","")}");`, true)
+      .then(result => {
+        win.reload()
+      });
+    }
   }
+  
   
   // if (win && win.webContents) {
   //   win.webContents.executeJavaScript(`console.log("${s}")`)
