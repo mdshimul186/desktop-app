@@ -93,7 +93,17 @@ app.whenReady().then(() => {
   }
   //logDeepLink(deeplinkingUrl)
 
-
+app.on("open-url",(event,url)=>{
+  let token = url.replace("ts4u-app://","")
+  if(token){
+    win.webContents
+    .executeJavaScript(`localStorage.setItem("token","Bearer ${token}");`, true)
+    .then(result => {
+      win.reload()
+    });
+  }
+  
+})
 
 app.on('logout', () => {
   win.webContents
