@@ -1,0 +1,11 @@
+//common
+@import './common/variable';
+@import './common/default';
+//pages
+@import './pages/auth';
+@import './pages/chat';
+
+
+//library
+@import 'antd/dist/antd.css';
+@import 'react-quill/dist/quill.snow.css';

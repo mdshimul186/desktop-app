@@ -1,0 +1,116 @@
+@import url("https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&family=Montserrat:wght@100;200;300;400;500;600;700;800&display=swap");
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  background-color: #f6f7fc;
+  font-family: "Arimo", sans-serif;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Montserrat", sans-serif;
+}
+
+.mr_5 {
+  margin-right: 5px;
+}
+.ml_5 {
+  margin-left: 5px;
+}
+.mr_10 {
+  margin-right: 10px;
+}
+.d_flex {
+  display: flex;
+}
+.d_between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.d_center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.default_button {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  max-width: 100%;
+  padding: 8px 24px;
+  background-color: $primary_color;
+  border-radius: 2px;
+  border: 1px solid $primary_color;
+  color: white;
+  outline: none;
+  cursor: pointer;
+  &:hover {
+    background-color: $primary_color_hover;
+  }
+  &.br_100 {
+    border-radius: 999px;
+  }
+  &:disabled {
+    border: black;
+    background-color: rgb(216, 216, 216);
+    color: black;
+    cursor: not-allowed;
+  }
+}
+.default_button_outline {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  max-width: 100%;
+  padding: 8px 24px;
+  background-color: white;
+  border-radius: 2px;
+  border: 1px solid $primary_color;
+  color: $primary_color;
+  outline: none;
+  transition: 0.5s all;
+  cursor: pointer;
+  &.br_100 {
+    border-radius: 999px;
+  }
+  &:hover {
+    background-color: $primary_color;
+    color: white;
+    border-color: white;
+  }
+  &:disabled {
+    border: black;
+    background-color: rgb(216, 216, 216);
+    color: black;
+    cursor: not-allowed;
+  }
+}
+
+// .container {
+//   max-width: 1300px;
+//   margin: 0 auto;
+//   @media (max-width: 1300px) {
+//     padding: 10px;
+//   }
+// }
+
