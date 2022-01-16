@@ -10,6 +10,7 @@ import { FaAngleDown, FaDownload } from 'react-icons/fa'
 import ChannelDetailsModal from '../components/chat/ChannelDetailsModal'
 import Message from '../components/chat/Message'
 import ReactQuill from 'react-quill'
+import placeholder from '../assets/placeholder.jpg'
 
 
 const modules = {
@@ -48,6 +49,7 @@ function ChatDetails() {
 
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [isFetching, setIsFetching] = useState(false)
 
     const [messages, setMessages] = useState([])
     const [messagesPending, setMessagesPending] = useState([])
@@ -58,7 +60,8 @@ function ChatDetails() {
 
     const [isSendingImage, setIsSendingImage] = useState(false)
     const [isSendingText, setIsSendingText] = useState(false)
-    const [rows, setRows] = useState(2)
+    const [count, setCount] = useState(0)
+    const [currentPage, setCurrentPage] = useState(1)
 
     const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false)
 
@@ -107,7 +110,20 @@ function ChatDetails() {
         }
     }
 
-  
+    const fetchMore = (page) => {
+        setIsFetching(true)
+        axios.get(`/chat/${params.chatid}/messages?page=${page+1}`)
+            .then(res => {
+                setMessages(prev=>([...res.data.messages,...prev]))
+                setCurrentPage(page+1)
+                setIsFetching(false)
+            })
+            .catch(err => {
+                setIsFetching(false)
+                err && err.response && setError(err.response?.data)
+                console.log(err);
+            })
+    }
 
     useEffect(() => {
         if (params.chatid) {
@@ -117,12 +133,14 @@ function ChatDetails() {
             axios.get(`/chat/${params.chatid}/messages`)
                 .then(res => {
                     setChat(res.data.chat)
-                    setMessages(res.data.messages)
+                    
+                    setCount(res.data.count)
                     dispatch({
                         type: "MARK_READ",
                         payload: res.data.chat._id
                     })
                     socket.emit("joinchat", { id: res.data.chat._id })
+                    setMessages(res.data.messages)
                     setIsLoading(false)
                 })
                 .catch(err => {
@@ -145,7 +163,6 @@ function ChatDetails() {
 
     const clearFields = () => {
         setText("")
-        setRows(2)
     }
 
     const dispatchLatest = (latestMessage) => {
@@ -184,7 +201,7 @@ function ChatDetails() {
             _id: randomId,
             sender: {
                 _id: randomId,
-                fullName: profile?.personalInformation?.firstName + " " + profile?.personalInformation?.lastName,
+                fullName: profile?.firstName + " " + profile?.lastName,
                 profilePicture: profile.profilePicture
             },
             createdAt: Date.now(),
@@ -207,43 +224,22 @@ function ChatDetails() {
     }
 
 
-    //send image using api
-    let handleImage = (img) => {
-        //setimgsending(true)
-        if (img) {
-            setIsSendingImage(true)
-            let formData = new FormData()
-            formData.append('chatimage', img)
-            axios.put('chat/sendimage/' + chat._id, formData)
-                .then(res => {
-                    setMessages(prev => [...prev, res.data.message])
-                    dispatchLatest(res.data.message)
-                    socket.emit("sendmessage", { message: res.data.message, chatid: chat._id })
-                    clearFields()
-                    setIsSendingImage(false)
-                })
-                .catch(err => {
-                    setIsSendingImage(false)
-                    console.log(err);
-                })
-        }
-
-    }
 
 
 
-    //scroll to last message automatically
-    let lastmsgref = useRef()
+  //scroll to last message automatically
+  let lastmsgref = useRef()
+    
 
-    useEffect(() => {
-        if (lastmsgref.current) {
-            lastmsgref.current.scrollIntoView({
-                behavior: "smooth",
-                block: "nearest",
-                //inline: "start"
-            })
-        }
-    })
+  useEffect(() => {
+      if (lastmsgref.current) {
+          lastmsgref.current.scrollIntoView({
+              behavior: "smooth",
+              block: "end",
+              inline: "nearest"
+          })
+      }
+  },[lastmsgref,messages[messages.length-1]])
 
 
 
@@ -399,17 +395,18 @@ function ChatDetails() {
                                     <div className="message_wapper">
                                         <div className='start_list'>
 
-                                            {
+                                        {
+                                                currentPage*30 < count  ?  <button disabled={isFetching} className='fetch_more' onClick={()=>fetchMore(currentPage)}> {isFetching ? <Spin/>:"fetch more"} </button>:
                                                 chat.isChannel ?
-                                                    <>
-                                                        <Avatar style={{ background: "#062539" }} size={60} >{chat?.name}</Avatar>
-                                                        <p>This is the very begining of the <strong>{chat?.name}</strong> channel</p>
-                                                    </>
-                                                    :
-                                                    <>
-                                                        <Avatar size={60} src={chat && findUser(chat.users)?.profilePicture || '/placeholder.jpg'} />
-                                                        <p>This is the very begining of the chat with <strong>{chat && findUser(chat.users)?.fullName}</strong></p>
-                                                    </>
+                                                <>
+                                                    <Avatar style={{ background: "#062539" }} size={60} >{chat?.name}</Avatar>
+                                                    <p>This is the very begining of the <strong>{chat?.name}</strong> channel</p>
+                                                </>
+                                                :
+                                                <>
+                                                    <Avatar size={60} src={chat && findUser(chat.users)?.profilePicture || '/placeholder.jpg'} />
+                                                    <p>This is the very begining of the chat with <strong>{chat && findUser(chat.users)?.fullName}</strong></p>
+                                                </>
                                             }
 
                                         </div>

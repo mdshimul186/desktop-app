@@ -2,7 +2,15 @@
     .wrapper {
       display: flex;
       height: 100vh;
-  
+      .new{
+        background-color: red;
+        border-radius: 999px;
+        padding: 2px 5px;
+        color: white;
+        font-weight: 400;
+        font-size: 12px;
+        display: inline-block;
+      }
       .sidebar {
         background: $primary_color;
         color: white;
@@ -75,16 +83,32 @@
               padding: 5px 10px;
               padding-left: 15px;
               cursor: pointer;
+              color: rgb(184, 184, 184);
               display: flex;
+            
   
               .name {
                 margin-left: 10px;
                 font-weight: 400;
+                overflow-x:hidden;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 85%;
+               
               }
+
+             
   
               &:hover,
               &.active {
                 background-color: $primary_color_hover;
+              }
+              &.unread{
+                color: white;
+                .name{
+                  font-weight: bold;
+                }
               }
             }
           }
@@ -99,6 +123,7 @@
               align-items: center;
               cursor: pointer;
               padding-left: 15px;
+              color: rgb(184, 184, 184);
   
               .img {
                 position: relative;
@@ -243,9 +268,18 @@
   
               .info {
                 margin-left: 10px;
+                width: 100%;
   
                 .name {
                   font-weight: 600;
+                  display: flex;
+                  justify-content: space-between;
+                  .user_name{
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    width: 85%;
+                  }
                 }
   
                 .text {
@@ -256,6 +290,9 @@
               &:hover,
               &.active {
                 background-color: $primary_color_hover;
+              }
+              &.unread{
+                color: white;
               }
             }
           }
@@ -405,7 +442,7 @@
   
             .activity {
               text-align: center;
-              margin-bottom: 10px;
+              margin: 10px 0;
               p {
                 background-color: #e4e4e4;
                 padding: 3px 10px;
@@ -454,6 +491,19 @@
   
       @media (max-width: 750px) {
         margin-top: 10px;
+      }
+
+
+      .fetch_more{
+        padding: 5px 10px;
+        border-radius: 3px;
+        background-color: $primary_color;
+        color: white;
+        outline: none;
+        cursor: pointer;
+        font-weight: 500;
+        margin: 10px 0;
+        text-transform: capitalize;
       }
     }
   

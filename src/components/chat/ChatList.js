@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { FaRegEdit, FaAngleRight, FaPlus, FaRegTrashAlt,FaLock } from 'react-icons/fa'
+import { FaRegEdit, FaAngleRight, FaPlus, FaRegTrashAlt, FaLock } from 'react-icons/fa'
 import { Avatar, message, Modal, notification, Tooltip } from 'antd'
 import axios from 'axios'
 import { useSelector, useDispatch } from 'react-redux'
-import { useHistory,useParams } from 'react-router-dom'
+import { useHistory, useParams } from 'react-router-dom'
 import OnlineUsersList from './OnlineUsers'
 import placeholder from '../../assets/placeholder.jpg'
 import bot from '../../assets/bot.png'
@@ -11,7 +11,7 @@ import bot from '../../assets/bot.png'
 
 
 
-function ChatList({ children,isListPage }) {
+function ChatList({ children, isListPage }) {
     const { user: profile } = useSelector(state => state.auth)
     const { chats } = useSelector(state => state.chat)
     const [isNewChatModalVisible, setIsNewChatModalVisible] = useState(false)
@@ -168,7 +168,7 @@ function ChatList({ children,isListPage }) {
             return notification.error({ message: "Please add at least 2 member" })
         }
 
-      
+
 
         axios.post('/chat/create-channel', data)
             .then(res => {
@@ -190,11 +190,11 @@ function ChatList({ children,isListPage }) {
 
     return (
         <>
-            
+
             <div id='chat'>
                 <div className="container">
                     <div className="wrapper">
-                        <div className={isListPage?"sidebar list_page":"sidebar"}>
+                        <div className={isListPage ? "sidebar list_page" : "sidebar"}>
                             <div className="top">
                                 <h4>TS4U Chat</h4>
                                 <span onClick={() => handleShowNewChatModal()} className='icon_wrapper'>
@@ -212,10 +212,18 @@ function ChatList({ children,isListPage }) {
                                 <ul className='channel_list'>
                                     {
                                         channels.length > 0 && channels.map((channel, i) => (
-                                            <li  onClick={() => handlePushChat(channel._id)} key={i} className={params?.chatid === channel._id ? "active" : ""}>
-                                                <span>{channel?.isPublic?"#":<FaLock style={{color:'white'}}/>}</span>
-                                                <span className='name'>{channel.name}</span>
-                                            </li>
+                                            <Tooltip title={channel.name}>
+                                                <li onClick={() => handlePushChat(channel._id)} key={i} className={channel.toRead.includes(profile._id) ? "unread" : ""}>
+
+                                                    <span>{channel?.isPublic ? "#" : <FaLock />}</span>
+                                                    <span className='name'>{channel.name}</span>
+                                                    {
+                                                        channel.toRead.includes(profile._id) && <span className='new'>new</span>
+                                                    }
+
+
+                                                </li>
+                                            </Tooltip>
                                         ))
                                     }
 
@@ -243,24 +251,27 @@ function ChatList({ children,isListPage }) {
                                 <ul className='dm_list'>
                                     {
                                         chatLists.length > 0 && chatLists.map((chat, i) => (
-                                            <li onClick={() => handlePushChat(chat._id)} key={i} className={params?.chatid === chat._id ? "list_item active" : "list_item"} >
+                                            <li onClick={() => handlePushChat(chat._id)} key={i} className={chat.toRead.includes(profile._id) ? "unread list_item" : "list_item"} >
                                                 <div className="img">
-                                                    <img src={findUser(chat.users).type === 'bot'? bot: findUser(chat.users).profilePicture || placeholder} alt="" />
+                                                    <img src={findUser(chat.users).type === 'bot' ? bot : findUser(chat.users).profilePicture || placeholder} alt="" />
                                                 </div>
                                                 <div className='info'>
-                                                    <span className='name'>
-                                                        {findUser(chat.users).fullName || "N/A"}
-                                                    </span>
+                                                    <div className='name'>
+                                                        <span className='user_name'>{findUser(chat.users).fullName || "N/A"}</span>
+                                                        {
+                                                            chat.toRead.includes(profile._id) && <span className='new'>new</span>
+                                                        }
+                                                    </div>
                                                     <p >
                                                         {
                                                             !chat.latestMessage ? <>New chat</> :
                                                                 chat.latestMessage?.type === 'image' ?
                                                                     <>
-                                                                        {chat.latestMessage.sender?.personalInformation?.firstName}: Image
+                                                                        {chat.latestMessage.sender?.firstName}: Image
                                                                     </>
                                                                     :
                                                                     <span className='text'>
-                                                                        {chat.latestMessage.sender?.personalInformation?.firstName}: {truncateString(getText(chat.latestMessage.content), 10)}                                                               </span>
+                                                                        {chat.latestMessage.sender?.firstName}: {truncateString(getText(chat.latestMessage.content), 10)}                                                               </span>
                                                         }
                                                     </p>
                                                 </div>
