@@ -42,6 +42,7 @@ const formats = [
 ];
 function ChatDetails() {
     const { user: profile } = useSelector(state => state.auth)
+    const { chatMessages } = useSelector(state => state.chat)
     const { chats } = useSelector(state => state.chat)
     const dispatch = useDispatch()
     let params = useParams()
@@ -66,21 +67,43 @@ function ChatDetails() {
     const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false)
 
     useEffect(() => {
+        if (chats && params.chatid) {
+            setChat(chats.filter(chat => chat._id === params.chatid)[0])
+        }
+    }, [chats, params])
+
+    useEffect(() => {
         if (socket) {
             socket.on("receive", data => {
                 if (data?.message?.activity?.type === 'remove' && data?.message?.activity?.user?._id === profile._id) {
                     socket.off('receive');
                     socket.off('istyping');
                 }
-                setMessages(prev => [...prev, data.message])
+                // setMessages(prev => [...prev, data.message])
+                dispatch({
+                    type:"PUSH_MESSAGE",
+                    payload: {chat:data.chat,message:data.message}
+                })
                 //console.log(data);
             })
             socket.on("istyping", data => {
                 setisTyping(data.istyping)
             })
+
+            socket.on("receive-update-chat", data => {
+                setChat((prev) => ({ ...prev, ...data.chat }))
+            })
+            socket.on("receive-update-message", data => {
+                dispatch({
+                    type:"UPDATE_MESSAGE",
+                    payload:{chat:data.chat,message:data.message}
+                })
+            })
             return () => {
                 socket.off('receive');
                 socket.off('istyping');
+                socket.off('receive-update-chat');
+                socket.off('receive-update-message');
 
             }
         }
@@ -98,7 +121,9 @@ function ChatDetails() {
     }
     let handleKey = (e) => {
 
-
+        if (e.keyCode === 13  && !e.shiftKey) {
+            return sendMessage()
+        }
         if (typing == false) {
             typing = true
             //console.log('typing started');
@@ -127,21 +152,28 @@ function ChatDetails() {
 
     useEffect(() => {
         if (params.chatid) {
-            setIsLoading(true)
+            //setIsLoading(true)
             setError(null)
-            setChat(null)
-            axios.get(`/chat/${params.chatid}/messages`)
+            //setChat(null)
+            setCurrentPage(1)
+            setCount(0)
+            axios.get(`/chat/${params.chatid}/messages?page=${0}`)
                 .then(res => {
                     setChat(res.data.chat)
-                    
+
                     setCount(res.data.count)
                     dispatch({
                         type: "MARK_READ",
                         payload: res.data.chat._id
                     })
                     socket.emit("joinchat", { id: res.data.chat._id })
-                    setMessages(res.data.messages)
                     setIsLoading(false)
+                    // setMessages(res.data.messages)
+                    dispatch({
+                        type: "UPDATE_CHAT_MESSAGES",
+                        payload: { chat: res.data.chat._id, messages: res.data.messages }
+                    })
+                    scrollIntoBottom()
                 })
                 .catch(err => {
                     setIsLoading(false)
@@ -196,26 +228,31 @@ function ChatDetails() {
             files: filesData
         }
         let randomId = Math.floor(Math.random() * (999999 - 1111) + 1111)
-        setMessagesPending(prev => [...prev, {
-            ...data,
-            _id: randomId,
-            sender: {
-                _id: randomId,
-                fullName: profile?.firstName + " " + profile?.lastName,
-                profilePicture: profile.profilePicture
-            },
-            createdAt: Date.now(),
-            isSending: true
-        }])
+        // setMessagesPending(prev => [...prev, {
+        //     ...data,
+        //     _id: randomId,
+        //     sender: {
+        //         _id: randomId,
+        //         fullName: profile?.firstName + " " + profile?.lastName,
+        //         profilePicture: profile.profilePicture
+        //     },
+        //     createdAt: Date.now(),
+        //     isSending: true
+        // }])
         setText('')
         axios.put(`/chat/sendmessage/${chat._id}`, data)
             .then(res => {
-                setMessages(prev => [...prev, res.data.message])
+                dispatch({
+                    type:"PUSH_MESSAGE",
+                    payload: {chat:chat?._id,message:res.data.message}
+                })
+                //setMessages(prev => [...prev, res.data.message])
                 dispatchLatest(res.data.message)
                 socket.emit("sendmessage", { message: res.data.message, chatid: chat._id })
                 clearFields()
                 setIsSendingText(false)
                 setFiles([])
+                scrollIntoBottom()
             })
             .catch(err => {
                 setIsSendingText(false)
@@ -231,15 +268,25 @@ function ChatDetails() {
   let lastmsgref = useRef()
     
 
-  useEffect(() => {
-      if (lastmsgref.current) {
-          lastmsgref.current.scrollIntoView({
-              behavior: "smooth",
-              block: "end",
-              inline: "nearest"
-          })
-      }
-  },[lastmsgref,messages[messages.length-1]])
+//   useEffect(() => {
+//       if (lastmsgref.current) {
+//           lastmsgref.current.scrollIntoView({
+//               behavior: "smooth",
+//               block: "end",
+//               inline: "nearest"
+//           })
+//       }
+//   },[lastmsgref,messages[messages.length-1]])
+
+const scrollIntoBottom = () => {
+    if (lastmsgref.current) {
+        lastmsgref.current.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+            inline: "nearest"
+        })
+    }
+}
 
 
 
@@ -247,27 +294,7 @@ function ChatDetails() {
     const EditorToolbar = useCallback(
         ({ handleSendText }) => (
             <div id="toolbar">
-                {/* <span className="ql-formats">
-              <select className="ql-font" defaultValue="arial">
-                <option value="arial">Arial</option>
-                <option value="comic-sans">Comic Sans</option>
-                <option value="courier-new">Courier New</option>
-                <option value="georgia">Georgia</option>
-                <option value="helvetica">Helvetica</option>
-                <option value="lucida">Lucida</option>
-              </select>
-              <select className="ql-size" defaultValue="medium">
-                <option value="extra-small">Size 1</option>
-                <option value="small">Size 2</option>
-                <option value="medium">Size 3</option>
-                <option value="large">Size 4</option>
-              </select>
-              <select className="ql-header" defaultValue="3">
-                <option value="1">Heading</option>
-                <option value="2">Subheading</option>
-                <option value="3">Normal</option>
-              </select>
-            </span> */}
+
                 <span className="ql-formats">
                     <button className="ql-bold" />
                     <button className="ql-italic" />
@@ -278,25 +305,13 @@ function ChatDetails() {
                     <button className="ql-list" value="ordered" />
                     <button className="ql-list" value="bullet" />
                     <button className="ql-blockquote" />
-                    {/* <button className="ql-indent" value="-1" />
-              <button className="ql-indent" value="+1" /> */}
                 </span>
-                {/* <span className="ql-formats"> */}
-                {/* <button className="ql-script" value="super" />
-              <button className="ql-script" value="sub" /> */}
-
-                {/* <button className="ql-direction" /> */}
-                {/* </span> */}
+ 
                 <span className="ql-formats">
                     <select className="ql-align" />
                     <button className="ql-code-block" />
-                    {/* <select className="ql-color" />
-              <select className="ql-background" /> */}
                 </span>
                 <span className="ql-formats">
-                    {/* <button className="ql-link" /> */}
-                    {/* <button className="ql-image" /> */}
-                    {/* <button className="ql-video" /> */}
                 </span>
                 {/* <span className="ql-formats">
               <button className="ql-formula" />
@@ -304,12 +319,6 @@ function ChatDetails() {
                <button className="ql-clean" /> 
             </span> */}
                 <span className="actions">
-                    {/* <button className="ql-undo">
-                <CustomUndo />
-              </button>
-              <button className="ql-redo">
-                <CustomRedo />
-              </button> */}
                     <IoIosAttach style={{ marginRight: "10px" }} onClick={() => uploadRef.current.click()} className='icon' size={20} />
                     <IoMdSend onClick={handleSendText} className='icon' size={20} />
                 </span>
@@ -357,6 +366,23 @@ function ChatDetails() {
 
     const handleChange = ({ fileList }) => setFiles(fileList);
 
+    const handleUpdateChat = (chat) => {
+        if (chat) {
+            setChat((prev) => ({ ...prev, ...chat }))
+            socket.emit("updatechat", { chat })
+        }
+    }
+
+    const handleUpdateMessage = (message) => {
+        dispatch({
+            type:"UPDATE_MESSAGE",
+            payload:{chat:chat?._id,message}
+        })
+
+        socket.emit("updatemessage", { chatid: chat?._id, message })
+    }
+
+
     return (
         <>
             <ChatList>
@@ -371,7 +397,7 @@ function ChatDetails() {
                                 <>
                                     <div className="top_bar">
                                         <div className="left">
-                                            {chat && chat.isChannel ? <span onClick={() => setIsDetailsModalVisible(true)} className='d_flex d_center' style={{ cursor: "pointer" }}>{`# ${chat.name}`} <FaAngleDown style={{ marginLeft: "5px" }} /></span> : findUser(chat.users)?.fullName}
+                                            {chat && chat.isChannel ? <span onClick={() => setIsDetailsModalVisible(true)} >{`# ${chat.name}`} <FaAngleDown style={{ marginLeft: "5px" }} /></span> : findUser(chat.users)?.fullName}
 
 
                                         </div>
@@ -412,69 +438,17 @@ function ChatDetails() {
                                         </div>
                                         <ul className='list_wrapper'>
 
-                                            {
-                                                [...messages, ...messagesPending].length > 0 &&
-                                                [...messages, ...messagesPending].map((message, index) => {
-                                                    const lastmessage = [...messages, ...messagesPending].length - 1 === index
+                                        {
+                                                chatMessages[params.chatid] &&
+                                                [...messages, ...chatMessages[params.chatid]||undefined, ...messagesPending].map((message, index) => {
+                                                    const lastmessage =  [...messages, ...chatMessages[params.chatid]||undefined, ...messagesPending].length - 1 === index
                                                     return (
-                                                        <Message lastmessage={lastmessage} ref={lastmessage ? lastmsgref : null} key={index} message={message} />
-                                                        // message.type === 'activity' ?
-                                                        //     <div ref={lastmessage ? lastmsgref : null} key={index} className="activity">
-                                                        //         <p>{generateActivityText(message)}</p>
-                                                        //     </div>
-                                                        //     :
-                                                        //     <li className='list_item' ref={lastmessage ? lastmsgref : null} key={index} >
-
-                                                        //         <div className="avatar">
-                                                        //             <img src={message.sender?.type === 'bot' ? "/bot.png" : message.sender?.profilePicture || "/placeholder.jpg"} alt="" />
-                                                        //         </div>
-                                                        //         <div className="content">
-                                                        //             <div className="name">
-                                                        //                 <h3>{message.sender?.fullName}</h3>
-                                                        //                 <span>{moment(message.createdAt).fromNow()}</span>
-                                                        //             </div>
-                                                        //             <div className="text">
-                                                        //                 {parse(message.content)}
-                                                        //                 {
-                                                        //                     message?.files?.length > 0 &&
-                                                        //                     <div className="file_donload_list">
-                                                        //                         {
-                                                        //                             message?.files.map((file, i) => (
-                                                        //                                 <div className='file_donload_item' key={i}>
-                                                        //                                     <div className="thumb">
-
-                                                        //                                     </div>
-                                                        //                                     <div className='info'>
-                                                        //                                         <div className="title">
-                                                        //                                             <h5 className="name">{file.name || "N/A"}</h5>
-                                                        //                                             <FaDownload />
-                                                        //                                         </div>
-                                                        //                                         <p className="type">PDF ({file.size || 0})</p>
-                                                        //                                     </div>
-                                                        //                                 </div>
-                                                        //                             ))
-                                                        //                         }
-                                                        //                     </div>
-
-                                                        //                     // <Upload
-                                                        //                     // fileList={ message?.files}
-                                                        //                     // listType='picture'
-                                                        //                     // showUploadList={{showDownloadIcon:true,showRemoveIcon:false}}
-                                                        //                     // className='antd_upload_files'
-
-                                                        //                     // />
-
-                                                        //                 }
-                                                        //             </div>
-                                                        //             {
-                                                        //                 message?.isSending && <p className='status'>Sending...</p>
-                                                        //             }
-
-                                                        //         </div>
-
-
-
-                                                        //     </li>
+                                                        <Message
+                                                            lastmessage={lastmessage}
+                                                            ref={lastmessage ? lastmsgref : null} key={index}
+                                                            message={message}
+                                                            handleUpdateMessage={(message) => handleUpdateMessage(message)}
+                                                        />
                                                     )
 
                                                 }
@@ -527,7 +501,11 @@ function ChatDetails() {
                 </div>
 
                 {
-                    chat && <ChannelDetailsModal channel={chat} isVisible={isDetailsModalVisible} onCancel={(chat) => {
+                    chat && <ChannelDetailsModal 
+                    channel={chat} 
+                    isVisible={isDetailsModalVisible} 
+                    handleUpdateChat={(chat)=>handleUpdateChat(chat)}
+                    onCancel={(chat) => {
                         chat && setChat(chat)
                         // console.log(chat);
                         setIsDetailsModalVisible(false);

@@ -326,8 +326,22 @@
           align-items: center;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
           border-top: 1px solid #ddd;
+          .left{
+            flex-basis: 80%;
+            display: flex;
+            align-items: center;
+            span{
+              word-break: break-all;
+              cursor: pointer;
+            }
+          }
           @media (max-width: 750px) {
             padding: 7px 10px;
+            .left{
+              span{
+                font-size: 17px;
+              }
+            }
           }
         }
   
@@ -400,6 +414,12 @@
                     font-size: 13px;
                     color: #c7c7c7;
                   }
+
+                  .emoji_drop{
+                    display: none;
+                    transition: all .3s;
+                    margin-left: 20px;
+                  }
                 }
   
                 .text {
@@ -408,12 +428,23 @@
                     margin-left: 20px;
                   }
   
-                  word-break: break-all;
+                  a{
+                    word-break: break-all;
+                  }
+                  img{
+                    max-width: 100%;
+                  }
                 }
                 .status {
                   color: #a8a8a8;
                   font-weight: 500;
                   font-size: 13px;
+                }
+                .emoji_container{
+                  background-color: white;
+                  padding: 5px;
+                  border-radius: 999px;
+                  box-shadow: $box_shadow;
                 }
               }
   
@@ -435,6 +466,16 @@
                   }
                   .text {
                     font-size: 13px;
+                  }
+                }
+              }
+              &:hover{
+                .content{
+                  .name{
+                    .emoji_drop{
+                      display: block;
+                      transition: all .3s;
+                    }
                   }
                 }
               }
@@ -690,6 +731,45 @@
         label {
           font-weight: 600;
           font-size: 18px;
+        }
+
+        .title{
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          label{
+            font-weight: 600;
+            font-size: 18px;
+          }
+          .edit_button{
+            font-size: 15px;
+            border: none;
+            color: $primary_color;
+            border-radius: 3px;
+            background: none;
+            font-weight: 500;
+            cursor: pointer;
+          }
+          .edit_button_cancel{
+            font-size: 15px;
+            border: none;
+            color: red;
+            background: none;
+            font-weight: 500;
+            cursor: pointer;
+            margin-right: 10px;
+          }
+        }
+  
+        .edit_input{
+          padding: 5px;
+          border-radius: 3px;
+          outline: none;
+          width: 70%;
+          border:1px solid rgb(161, 161, 161);
+          &:focus{
+            outline: none;
+          }
         }
   
         h3 {

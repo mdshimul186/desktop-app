@@ -123,7 +123,7 @@ ipcMain.on("reload", () => {
 // })
 
 ipcMain.on("notify", (_, message) => {
-  new Notification({ title: "Notification", body: message }).show()
+  new Notification({ title: message?.title||"Notification", body: message.body||"" }).show()
 })
 ipcMain.on("open-link", (_, link) => {
  shell.openExternal(link)

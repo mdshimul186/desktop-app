@@ -2,17 +2,33 @@
 let init = {
     chats: [],
     onlineUsers: [],
+    chatMessages: {}
 
 }
 
-const authReducer = (state = init, action) => {
+function htmlToStr(text) {
+    return text.replace(/<[^>]*>?/gm, '')
+}
+
+const handleChatNoti=(chat)=>{
+    window.electron.notificationApi.sendNotification(
+      {
+        title: chat.isChannel ? chat.name + ": " + chat?.latestMessage?.sender?.fullName : chat?.latestMessage?.sender?.fullName,
+        body:htmlToStr(chat.latestMessage?.content)
+      }
+        )
+  }
+
+const chatReducer = (state = init, action) => {
     switch (action.type) {
         case "SET_CHATS":
+           
             return {
                 ...state,
                 chats: action.payload,
             }
         case "UPDATE_CHATS":
+            handleChatNoti(action.payload)
             let array = [...state.chats]
             let index = array.findIndex((chat) => chat._id === action.payload._id)
             if (index === -1) {
@@ -71,10 +87,46 @@ const authReducer = (state = init, action) => {
         case "REMOVE_ONLINE_USER":
             let temparrayOnline = [...state.onlineUsers]
             let filtered = temparrayOnline.filter((user) => user._id !== action.payload?._id)
-           
+
             return {
                 ...state,
                 onlineUsers: filtered,
+            }
+
+        case "UPDATE_CHAT_MESSAGES":
+            //console.log(action.payload);
+            return {
+                ...state,
+                chatMessages: { ...state.chatMessages, [action.payload.chat]: action.payload.messages },
+            }
+        case "PUSH_MESSAGE":
+            let allChatMessages = state.chatMessages
+            let messagesArray = allChatMessages[action.payload.chat]
+            messagesArray.push(action.payload.message)
+            let finalArray = messagesArray.slice((messagesArray.length - 30), messagesArray.length)
+            return {
+                ...state,
+                chatMessages: { ...state.chatMessages, [action.payload.chat]: finalArray },
+            }
+
+
+        case "UPDATE_MESSAGE":
+           
+            let allChatMessages_U = state.chatMessages
+            let messagesArray_U = allChatMessages_U[action.payload.chat]
+
+            let messagesArray_U_index = messagesArray_U.findIndex(m => m._id === action.payload.message._id)
+
+
+
+            if (messagesArray_U_index !== -1) {
+                messagesArray_U[messagesArray_U_index] = { ...messagesArray_U[messagesArray_U_index], ...action.payload.message }
+            }
+
+            //console.log(messagesArray_U[]);
+            return {
+                ...state,
+                chatMessages: { ...state.chatMessages, [action.payload.chat]: messagesArray_U },
             }
 
 
@@ -83,4 +135,4 @@ const authReducer = (state = init, action) => {
     }
 }
 
-export default authReducer
+export default chatReducer

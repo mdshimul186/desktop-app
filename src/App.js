@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import ChatDetails from "./pages/ChatDetails";
 import { useEffect } from "react";
 import {useDispatch} from 'react-redux'
+
 function App({userData}) {
   let history = useHistory()
   const dispatch = useDispatch()
@@ -16,10 +17,12 @@ function App({userData}) {
     history.push('/chat')
   }
 
+
+
   useEffect(() => {
     if (socket) {
         socket.on("newmessage", data => {
-            //console.log(data);
+         
             dispatch({
                 type: "UPDATE_CHATS",
                 payload: data.chat
@@ -52,6 +55,7 @@ function App({userData}) {
 
   return (
     <Switch >
+    
       {/* <Route path="/chat" exact component={Chat} />
       <Route path="/" exact component={Auth} /> */}
        {

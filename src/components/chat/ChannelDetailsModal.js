@@ -6,7 +6,7 @@ import axios from 'axios';
 import { FaRegTrashAlt } from 'react-icons/fa';
 const { TabPane } = Tabs;
 
-function ChannelDetailsModal({ channel, isVisible, onCancel }) {
+function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) {
     const { user } = useSelector(state => state.auth)
     const dispatch = useDispatch()
     const [activeTab, setActiveTab] = useState('about')
@@ -16,6 +16,9 @@ function ChannelDetailsModal({ channel, isVisible, onCancel }) {
     const [searchedUser, setSearchedUser] = useState([])
     const [isUserLoading, setIsUserLoading] = useState(false)
     const [selectedUser, setSelectedUser] = useState([])
+
+    const [updateChannelName, setUpdateChannelName] = useState({status:false,name:""})
+    const [updateChannelDescription, setUpdateChannelDescription] = useState({status:false,description:""})
 
     useEffect(() => {
         if (channel) {
@@ -114,6 +117,50 @@ function ChannelDetailsModal({ channel, isVisible, onCancel }) {
     }
 
 
+    const handleUpdateChatInfo=(type)=>{
+        let data ={
+
+        }
+        if (type === 'name'){
+            if(!updateChannelName.name){
+                return notification.error({message:"Channel name is required"})
+            }else  if(updateChannelName.name === channel.name){
+                return setUpdateChannelName({status:false, name:""})
+            }else{
+                data.name = updateChannelName.name
+            }
+           
+        }
+
+        if (type === 'description'){
+            if(!updateChannelDescription.description){
+                return setUpdateChannelDescription({status:false, name:""})
+            }else if(updateChannelDescription.description === channel.description){
+                return setUpdateChannelDescription({status:false, name:""})
+            }else{
+                data.description = updateChannelDescription.description
+            }
+           
+        }
+
+        axios.patch(`/chat/channel/update-info/${channel?._id}`,data)
+        .then(res=>{
+            if(res.data.chat){
+                handleUpdateChat(res.data.chat)
+                if (type === 'description'){
+                    setUpdateChannelDescription({status:false,description:""})
+                }
+                if (type === 'name'){
+                    setUpdateChannelName({status:false,name:""})
+                }
+            }
+        })
+        .catch(err => {
+            notification.error({ message: err?.response?.data?.error })
+        })
+    }
+
+
 
     return (
         <Modal
@@ -140,13 +187,57 @@ function ChannelDetailsModal({ channel, isVisible, onCancel }) {
             <Tabs centered activeKey={activeTab} onChange={(v) => setActiveTab(v)} >
                 <TabPane tab="About" key="about">
                     <div className="about">
-                        <li>
-                            <label>Name</label>
-                            <h3>{channel.name || "N/A"}</h3>
+                    <li>
+                            <div className='title'>
+                                <label>Name</label>
+                                {
+                                      channel?.initiator?._id === user._id && 
+                                      <div>
+                                      {
+                                          updateChannelName.status ?
+                                          <>
+                                          <button onClick={()=>setUpdateChannelName({status:false,name:""})} className='edit_button_cancel'>Cancel</button>
+                                          <button onClick={()=>handleUpdateChatInfo("name")} className='edit_button'>Save</button>
+                                          </>:
+                                      <button onClick={()=>setUpdateChannelName({status:true,name:channel?.name||""})} className='edit_button'>Edit</button>
+
+                                      }
+                                      </div>
+                                }
+                                
+                            </div>
+                            {
+                                updateChannelName.status ?
+                                <input value={updateChannelName.name} onChange={(e)=>setUpdateChannelName(prev=>({...prev,name:e.target.value}))} className='edit_input' defaultValue={channel.name} />:
+                                <h3>{channel.name || "N/A"}</h3>
+                            }
+                           
                         </li>
                         <li>
-                            <label>Description</label>
-                            <h3>{channel.description || "N/A"}</h3>
+                            <div className='title'>
+                                <label>Description</label>
+                                {
+                                      channel?.initiator?._id === user._id && 
+                                      <div>
+                                      {
+                                          updateChannelDescription.status ?
+                                          <>
+                                          <button onClick={()=>setUpdateChannelDescription({status:false,description:""})} className='edit_button_cancel'>Cancel</button>
+                                          <button onClick={()=>handleUpdateChatInfo("description")} className='edit_button'>Save</button>
+                                          </>:
+                                      <button onClick={()=>setUpdateChannelDescription({status:true,description:channel?.description||""})} className='edit_button'>Edit</button>
+
+                                      }
+                                      </div>
+                                }
+                              
+                            </div>
+                            {
+                                updateChannelDescription.status ?
+                                <textarea  value={updateChannelDescription.description} onChange={(e)=>setUpdateChannelDescription(prev=>({...prev,description:e.target.value}))} className='edit_input' defaultValue={channel.description} />:
+                                <h3>{channel.description || "N/A"}</h3>
+                            }
+                            
                         </li>
                         <li>
                             <label>Created by</label>
