@@ -1,9 +1,10 @@
 import moment from 'moment'
-import React, { forwardRef } from 'react'
-import { FaDownload, FaFileAlt, FaFilePdf } from 'react-icons/fa'
-import { GrEmoji } from 'react-icons/gr'
+import React, { forwardRef, useState } from 'react'
+import { FaDownload } from 'react-icons/fa'
+import { AiOutlineMessage, AiOutlineEdit, AiOutlineDelete } from "react-icons/ai";
+import { MdOutlineAddReaction } from 'react-icons/md'
 import parse from 'html-react-parser'
-import { Image ,Dropdown, notification} from 'antd'
+import { Image, Dropdown, notification, Tooltip } from 'antd'
 import mime from 'mime'
 import docImage from '../../assets/doc.png'
 import fileImage from '../../assets/file.png'
@@ -16,6 +17,7 @@ import placeholderImage from '../../assets/placeholder.jpg'
 import botImage from '../../assets/bot.png'
 import axios from "axios";
 import Picker from 'emoji-picker-react'
+import { useSelector } from 'react-redux'
 
 
 const images = ["image/bmp", "image/cis-cod", "image/gif", "image/jpeg", "image/pipeg", "image/x-xbitmap", "image/png"]
@@ -44,7 +46,11 @@ const generateActivityText = (message) => {
 
 
 const Message = forwardRef((props, ref) => {
-    const { message, lastmessage, handleUpdateMessage } = props
+    const { message, lastmessage, handleUpdateMessage, setThreadMessage, isThread, setEditMessage, setDeleteMessage } = props
+    const { user } = useSelector(state => state.auth)
+
+    const [showThread, setShowThread] = useState(false)
+
 
     const onEmojiClick = (event, emojiObject) => {
         //setChosenEmoji(emojiObject);
@@ -74,113 +80,211 @@ const Message = forwardRef((props, ref) => {
     );
 
     return (
-        message.type === 'activity' ?
-            <div ref={lastmessage ? ref : null} className="activity">
-                <p>{generateActivityText(message)}</p>
-            </div>
-            :
-            <li className='list_item' ref={lastmessage ? ref : null} >
-
+        message.type === "delete" ? (
+            <li className="list_item" ref={lastmessage ? ref : null}>
                 <div className="avatar">
-                    <img src={message.sender?.type === 'bot' ? botImage : message.sender?.profilePicture || placeholderImage} alt="" />
+                    <img
+                        src={
+                            message.sender?.type === "bot"
+                                ? "/bot.png"
+                                : message.sender?.profilePicture || "/placeholder.jpg"
+                        }
+                        alt=""
+                    />
                 </div>
                 <div className="content">
                     <div className="name">
                         <h3>{message.sender?.fullName}</h3>
                         <span>{moment(message.createdAt).fromNow()}</span>
-
-                        <Dropdown
-                            className="emoji_drop"
-                            overlay={pickerOverlay}
-                            trigger={["click"]}
-                        >
-                            <a
-                                className="ant-dropdown-link"
-                                onClick={(e) => e.preventDefault()}
-                            >
-                                  <GrEmoji  style={{ fontSize: "20px", color: "black" }} />
-                            </a>
-                        </Dropdown>
                     </div>
                     <div className="text">
-                        {parse(message.content)}
-                        {
-                            message?.files?.length > 0 &&
-                            <div className="file_download_list">
-                                {
-                                    message?.files.map((file, i) => (
-                                        <>
-                                            {
-                                                message?.files.length === 1 && images.includes(file.type) ? <Image style={{ maxWidth: "100%" }} src={file.url} /> :
-                                                    <div className='file_download_item' key={i}>
+                        <p className="deleted_message">this message has been deleted</p>
 
-
-                                                        <div className="thumb">
-                                                            {
-                                                                images.includes(file.type) ? <Image sizes={10} src={file.url} /> :
-                                                                    file.type === 'application/pdf' ? <img src={pdfImage} /> :
-                                                                        file.type === 'text/plain' ? <img src={txtImage} /> :
-                                                                            file.type === 'application/msword' || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ? <img src={docImage} /> :
-                                                                                file.type === 'application/vnd.ms-excel' || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? <img src={sheetImage} /> :
-                                                                                    file.type === 'application/zip' || file.type === 'application/x-zip-compressed' ? <img src={zipImage} /> :
-                                                                                        <img src={fileImage} />
-                                                            }
-
-                                                        </div>
-                                                        <div className='info'>
-                                                            <div className="title">
-                                                                <h5 className="file_name">{file.name || "N/A"}</h5>
-                                                                <a href={file?.url}>
-                                                                    <FaDownload className='download' />
-                                                                </a>
-                                                            </div>
-                                                            <div className="type">
-                                                                <span className='mime'> {mime.getExtension(file.type) || 'File'}</span>
-
-                                                                ({bytesToSize(file.size || 0)})
-                                                            </div>
-                                                        </div>
-
-
-
-                                                    </div>
-                                            }
-                                        </>
-
-
-                                    ))
-                                }
-
-                            </div>
-
-                            // <Upload
-                            // fileList={ message?.files}
-                            // listType='picture'
-                            // showUploadList={{showDownloadIcon:true,showRemoveIcon:false}}
-                            // className='antd_upload_files'
-
-                            // />
-
-                        }
                     </div>
-                    {
-                        message?.isSending && <p className='status'>Sending...</p>
-                    }
-
-                    {message.emoji && message.emoji.length > 0 && (
-                        <span className="emoji_container">
-                            {message.emoji.map((emoji, i) => (
-                                <span className="emoji_symbol">{emoji.symbol}</span>
-                            ))}
-                            {message.emoji.length}
-                        </span>
-                    )}
-
                 </div>
-
-
-
             </li>
+        ) :
+            message.type === 'activity' ?
+                <div ref={lastmessage ? ref : null} className="activity">
+                    <p>{generateActivityText(message)}</p>
+                </div>
+                :
+                <li className='list_item' ref={lastmessage ? ref : null} >
+
+                    <div className="avatar">
+                        <img src={message.sender?.type === 'bot' ? botImage : message.sender?.profilePicture || placeholderImage} alt="" />
+                    </div>
+                    <div className="content">
+                        <div className="name">
+                            <h3>{message.sender?.fullName}</h3>
+                            <span>{moment(message.createdAt).fromNow()}</span>
+
+                            {
+                                !isThread &&
+                                <div className="message_actions">
+
+
+                                    <Dropdown
+                                        className="emoji_drop"
+                                        overlay={pickerOverlay}
+                                        trigger={["click"]}
+                                    >
+                                        <a
+                                            className="ant-dropdown-link"
+                                            style={{ display: "flex", alignItems: "center" }}
+                                            onClick={(e) => e.preventDefault()}
+                                        >
+
+                                            <Tooltip placement="top" title="Add reaction">
+
+                                                <MdOutlineAddReaction style={{ marginRight: "10px" }} className="icon" size={20} />
+                                            </Tooltip>
+
+                                        </a>
+                                    </Dropdown>
+                                    <Tooltip placement="top" title="Reply in thread">
+                                        <AiOutlineMessage className="icon" size={20} onClick={() => setThreadMessage(message)} />
+                                    </Tooltip>
+                                    {
+                                        message?.sender?._id === user._id &&
+                                        <>
+                                            <Tooltip placement="top" title="Edit you message">
+                                                <AiOutlineEdit className="icon" size={20} onClick={() => setEditMessage(message)} />
+                                            </Tooltip>
+                                            <Tooltip placement="top" title="Delete this message">
+                                                <AiOutlineDelete className="icon" size={20} onClick={() => setDeleteMessage(message)} />
+                                            </Tooltip>
+                                        </>
+                                    }
+
+                                </div>
+                            }
+                        </div>
+                        <div className="text">
+                            {parse(message.content)}
+                            {
+                                message?.edited && <span className="edited">(edited)</span>
+                            }
+                            {
+                                message?.files?.length > 0 &&
+                                <div className="file_download_list">
+                                    {
+                                        message?.files.map((file, i) => (
+                                            <>
+                                                {
+                                                    message?.files.length === 1 && images.includes(file.type) ? <Image style={{ maxWidth: "100%" }} src={file.url} /> :
+                                                        <div className='file_download_item' key={i}>
+
+
+                                                            <div className="thumb">
+                                                                {
+                                                                    images.includes(file.type) ? <Image sizes={10} src={file.url} /> :
+                                                                        file.type === 'application/pdf' ? <img src={pdfImage} /> :
+                                                                            file.type === 'text/plain' ? <img src={txtImage} /> :
+                                                                                file.type === 'application/msword' || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ? <img src={docImage} /> :
+                                                                                    file.type === 'application/vnd.ms-excel' || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? <img src={sheetImage} /> :
+                                                                                        file.type === 'application/zip' || file.type === 'application/x-zip-compressed' ? <img src={zipImage} /> :
+                                                                                            <img src={fileImage} />
+                                                                }
+
+                                                            </div>
+                                                            <div className='info'>
+                                                                <div className="title">
+                                                                    <h5 className="file_name">{file.name || "N/A"}</h5>
+                                                                    <a href={file?.url}>
+                                                                        <FaDownload className='download' />
+                                                                    </a>
+                                                                </div>
+                                                                <div className="type">
+                                                                    <span className='mime'> {mime.getExtension(file.type) || 'File'}</span>
+
+                                                                    ({bytesToSize(file.size || 0)})
+                                                                </div>
+                                                            </div>
+
+
+
+                                                        </div>
+                                                }
+                                            </>
+
+
+                                        ))
+                                    }
+
+                                </div>
+
+                                // <Upload
+                                // fileList={ message?.files}
+                                // listType='picture'
+                                // showUploadList={{showDownloadIcon:true,showRemoveIcon:false}}
+                                // className='antd_upload_files'
+
+                                // />
+
+                            }
+
+                            {
+                                !isThread && message?.replies?.length > 0 &&
+                                <div className="replies_wrapper">
+                                    <span onClick={() => setShowThread(prev => !prev)} className="replies_count">{message.replies.length} replies</span>
+                                    {
+                                        showThread &&
+                                        <ul className="list_wrapper">
+                                            {
+                                                message.replies.map((reply, i) => (
+                                                    <li className="list_item" key={i}>
+                                                        <div className="avatar">
+                                                            <img
+                                                                src={
+                                                                    reply.sender?.type === "bot"
+                                                                        ? "/bot.png"
+                                                                        : reply.sender?.profilePicture || "/placeholder.jpg"
+                                                                }
+                                                                alt=""
+                                                            />
+                                                        </div>
+                                                        <div className="content">
+                                                            <div className="name">
+                                                                <h3>{reply.sender?.fullName}</h3>
+                                                                <span>{moment(reply.createdAt).fromNow()}</span>
+                                                            </div>
+                                                            <div className="text">
+                                                                {parse(reply.content)}
+                                                            </div>
+                                                        </div>
+
+                                                    </li>
+                                                ))
+                                            }
+                                        </ul>
+                                    }
+
+
+                                </div>
+
+                            }
+
+
+                        </div>
+                        {
+                            message?.isSending && <p className='status'>Sending...</p>
+                        }
+
+                        {message.emoji && message.emoji.length > 0 && (
+                            <span className="emoji_container">
+                                {message.emoji.map((emoji, i) => (
+                                    <span className="emoji_symbol">{emoji.symbol}</span>
+                                ))}
+                                {message.emoji.length}
+                            </span>
+                        )}
+
+                    </div>
+
+
+
+                </li>
     )
 })
 

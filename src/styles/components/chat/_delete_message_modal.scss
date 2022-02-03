@@ -1,0 +1,68 @@
+.delete_message_modal{
+    .warning{
+        font-weight: 500;
+        margin-bottom: 10px ;
+        font-size: 17px;
+        color: red;
+    }
+    .default_button{
+            background-color: red;
+            border: none;
+    }
+    .message_wrapper{
+        display: flex;
+        max-height: 300px;
+        overflow-x: auto;
+        .left{
+            align-self: flex-start;
+
+              .avatar {
+                height: 40px;
+                width: 40px;
+                border-radius: 5px;
+              }
+        }
+        .right{
+            margin-left: 10px;
+            width: 100%;
+            .name_info{
+                display: flex;
+                align-items: center;
+                .name{
+                    font-weight: 600;
+                    font-size: 16px;
+                }
+                .time{
+                    margin-left: 10px;
+                    font-size: 13px;
+                    color: #c7c7c7;
+                }
+            }
+            .content{
+                width: 100%;
+                background-color: #F0F4F9;
+                padding: 5px;
+                //width: 100%;
+                position: relative;
+                ol,
+                ul {
+                  margin-left: 20px;
+                }
+
+               
+                a{
+                  word-break: break-all;
+                }
+                img{
+                  max-width: 100%;
+                }
+                .edited{
+                  font-size: 13px;
+                  color: #c4c4c4;
+                  margin-bottom: 5px;
+                  display: inline-block;
+                }
+            }
+        }
+    }
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { FaRegEdit, FaAngleRight, FaPlus, FaRegTrashAlt, FaLock } from 'react-icons/fa'
-import { Avatar, message, Modal, notification, Tooltip } from 'antd'
+import { FaRegEdit, FaAngleRight, FaPlus, FaRegTrashAlt, FaLock ,FaSearch} from 'react-icons/fa'
+import { Avatar, message, Modal, notification, Spin, Tooltip } from 'antd'
 import axios from 'axios'
 import { useSelector, useDispatch } from 'react-redux'
 import { useHistory, useParams } from 'react-router-dom'
@@ -29,13 +29,39 @@ function ChatList({ children, isListPage }) {
     const [description, setDescription] = useState('')
     const [members, setMembers] = useState([])
 
+    const [isCreatingChannel, setIsCreatingChannel] = useState(false)
+
+
+    const [records, setRecords] = useState({
+        chatLists: [],
+        channels: []
+    })
+
+
 
     useEffect(() => {
         let chatArray = chats.filter(c => c.isChannel === false)
         let channelArray = chats.filter(c => c.isChannel === true)
         setChatLists(chatArray)
         setChannels(channelArray)
+        setRecords({
+            chatLists: chatArray,
+            channels: channelArray
+        })
     }, [chats])
+
+    const handleChangeSearch = (e) => {
+        if (e.target.value) {
+            let filteredChannels = records.channels.filter((c)=>c.name.toLowerCase().includes(e.target.value.toLowerCase()))
+            let filteredChats = records.chatLists.filter((c)=>findUser(c.users).fullName.toLowerCase().includes(e.target.value.toLowerCase()))
+            setChatLists(filteredChats)
+            setChannels(filteredChannels)
+        } else {
+            setChatLists(records.chatLists)
+            setChannels(records.channels)
+        }
+
+    }
 
     const searchRef = useRef(null)
     const history = useHistory()
@@ -169,7 +195,7 @@ function ChatList({ children, isListPage }) {
         }
 
 
-
+        setIsCreatingChannel(true)
         axios.post('/chat/create-channel', data)
             .then(res => {
                 dispatch({
@@ -177,11 +203,13 @@ function ChatList({ children, isListPage }) {
                     payload: res.data.chat
                 })
                 handleCancelNewChannelModal()
+                setIsCreatingChannel(false)
                 history.push(`/chat/${res.data.chat._id}`)
             })
             .catch(err => {
+                setIsCreatingChannel(false)
                 console.log(err);
-                message.error("something went wrong")
+                Notification.error({message:err?.response?.data?.error})
             })
     }
 
@@ -201,6 +229,10 @@ function ChatList({ children, isListPage }) {
                                     <FaRegEdit size={25} className='icon' />
                                 </span>
                             </div>
+                            <div className="search">
+                                <FaSearch className='search_icon' />
+                                <input placeholder='Type user/channel name..' onChange={handleChangeSearch} type="text" />
+                            </div>
                             <div className="channels">
                                 <div className="section_title">
                                     Channels
@@ -212,8 +244,8 @@ function ChatList({ children, isListPage }) {
                                 <ul className='channel_list'>
                                     {
                                         channels.length > 0 && channels.map((channel, i) => (
-                                            <Tooltip title={channel.name}>
-                                                <li onClick={() => handlePushChat(channel._id)} key={i} className={channel.toRead.includes(profile._id) ? "unread" : ""}>
+                                            <Tooltip key={i}  title={channel.name}>
+                                                <li onClick={() => handlePushChat(channel._id)} className={channel.toRead.includes(profile._id) ? "unread" : ""}>
 
                                                     <span>{channel?.isPublic ? "#" : <FaLock />}</span>
                                                     <span className='name'>{channel.name}</span>
@@ -341,7 +373,7 @@ function ChatList({ children, isListPage }) {
                     <button onClick={() => handleCancelNewChannelModal()} style={{ marginRight: "10px" }} className='default_button_outline'>Cancel</button>,
                     step === 1 ?
                         <button onClick={() => handleNext()} className='default_button'> Next</button> :
-                        <button onClick={() => handleCreateChannel()} className='default_button'> Create</button>
+                        <button disabled={isCreatingChannel} onClick={() => handleCreateChannel()} className='default_button'>{isCreatingChannel && <Spin />} Create</button>
                 ]}
                 style={{ top: "2%" }}
             >

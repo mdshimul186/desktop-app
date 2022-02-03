@@ -7,10 +7,11 @@ let init = {
 }
 
 function htmlToStr(text) {
-    return text.replace(/<[^>]*>?/gm, '')
+    return text?.replace(/<[^>]*>?/gm, '')
 }
 
 const handleChatNoti=(chat)=>{
+    chat.latestMessage?.content &&
     window.electron.notificationApi.sendNotification(
       {
         title: chat.isChannel ? chat.name + ": " + chat?.latestMessage?.sender?.fullName : chat?.latestMessage?.sender?.fullName,
@@ -34,7 +35,7 @@ const chatReducer = (state = init, action) => {
             if (index === -1) {
                 array.unshift(action.payload)
             } else {
-                array[index] = action.payload
+                array[index] = {...array[index],...action.payload}
             }
 
             return {

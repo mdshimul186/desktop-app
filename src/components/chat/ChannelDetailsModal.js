@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Avatar, Modal, notification, Tabs, Popconfirm } from 'antd'
+import { Avatar, Modal, notification, Tabs, Popconfirm,Spin } from 'antd'
 import moment from 'moment';
 import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios';
 import { FaRegTrashAlt } from 'react-icons/fa';
 const { TabPane } = Tabs;
 
-function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) {
+function ChannelDetailsModal({ channel, isVisible, onCancel ,handleUpdateChat}) {
     const { user } = useSelector(state => state.auth)
     const dispatch = useDispatch()
     const [activeTab, setActiveTab] = useState('about')
@@ -20,6 +20,10 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
     const [updateChannelName, setUpdateChannelName] = useState({status:false,name:""})
     const [updateChannelDescription, setUpdateChannelDescription] = useState({status:false,description:""})
 
+    const [addingList, setAddingList] = useState([])
+    const [removingList, setRemovingList] = useState([])
+
+
     useEffect(() => {
         if (channel) {
             setUsers(channel?.users || [])
@@ -32,36 +36,42 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
 
     }
 
-    const handleUpdateChannel = () => {
+    const handleRemoveUser = (userId) => {
         let data = {
-            users: users.map(u => u._id)
+            user: userId
         }
-        axios.patch(`/chat/channel/update/${channel._id}`, data)
+        setRemovingList(prev=>[...prev,userId])
+        axios.patch(`/chat/channel/remove-user/${channel._id}`, data)
             .then(res => {
                 dispatch({
                     type: "UPDATE_CHATS",
                     payload: res.data.chat
                 })
-                onCancel(res.data.chat)
+                setRemovingList(prev=>prev.filter(id=>id!==userId))
+                //onCancel(res.data.chat)
             })
             .catch(err => {
+                setRemovingList(prev=>prev.filter(id=>id!==userId))
                 err && err?.response && notification.error({ message: err?.response?.data?.error })
             })
     }
 
-    const adduserChannel = () => {
+    const adduserChannel = (userId) => {
         let data = {
-            users: selectedUser.map(u => u._id)
+            user:userId
         }
+        setAddingList(prev=>[...prev, userId])
         axios.patch(`/chat/channel/adduser/${channel._id}`, data)
             .then(res => {
                 dispatch({
                     type: "UPDATE_CHATS",
                     payload: res.data.chat
                 })
-                onCancel(res.data.chat)
+                setAddingList(prev=>prev.filter(id=>id!==userId))
+                //onCancel(res.data.chat)
             })
             .catch(err => {
+                setAddingList(prev=>prev.filter(id=>id!==userId))
                 err && err?.response && notification.error({ message: err?.response?.data?.error })
             })
     }
@@ -82,20 +92,6 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
 
     }
 
-    const handleAdd = (user) => {
-        setSearchedUser(prev => prev.filter(u => u._id !== user._id))
-        if (selectedUser.filter(u => u._id === user._id).length > 0) {
-            return
-        } else {
-            setSelectedUser(prev => ([...prev, { ...user, canDelete: true }]))
-        }
-    }
-
-    const handleRemoveSelected = (member) => {
-        setSearchedUser((prev) => (prev.filter(m => m._id !== member._id)))
-    }
-
-
     const handleLeave = () => {
         axios.patch(`/chat/channel/leave/${channel._id}`)
             .then(res => {
@@ -106,8 +102,8 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
             })
     }
 
-    const handleArchived = () => {
-        axios.patch(`/chat/channel/archive/${channel._id}`)
+    const handleArchived = (isArchived) => {
+        axios.patch(`/chat/channel/archive/${channel._id}`, { isArchived })
             .then(res => {
                 window.location.reload()
             })
@@ -146,7 +142,12 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
         axios.patch(`/chat/channel/update-info/${channel?._id}`,data)
         .then(res=>{
             if(res.data.chat){
-                handleUpdateChat(res.data.chat)
+               // handleUpdateChat(res.data.chat)
+               let chat = res.data.chat
+               dispatch({
+                type: "UPDATE_CHATS",
+                payload: {_id:chat?._id,name:chat?.name,description:chat?.description}
+            })
                 if (type === 'description'){
                     setUpdateChannelDescription({status:false,description:""})
                 }
@@ -156,6 +157,7 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
             }
         })
         .catch(err => {
+            console.log(err);
             notification.error({ message: err?.response?.data?.error })
         })
     }
@@ -166,18 +168,19 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
         <Modal
             visible={isVisible}
             onCancel={() => onCancel(null)}
-            footer={
-                channel?.initiator?._id === user._id && activeTab === 'members' ? [
-                    <button onClick={() => onCancel(null)} style={{ marginRight: "10px" }} className='default_button_outline'>Cancel</button>,
-                    <button onClick={() => handleUpdateChannel()} className='default_button'>Save</button>
-                ] :
-                    channel?.initiator?._id === user._id && activeTab === 'add' ? [
-                        <button onClick={() => onCancel(null)} style={{ marginRight: "10px" }} className='default_button_outline'>Cancel</button>,
-                        <button onClick={() => adduserChannel()} className='default_button'>Add</button>
-                    ]
+            footer={false}
+            // footer={
+            //     channel?.initiator?._id === user._id && activeTab === 'members' ? [
+            //         <button onClick={() => onCancel(null)} style={{ marginRight: "10px" }} className='default_button_outline'>Cancel</button>,
+            //         <button onClick={() => handleUpdateChannel()} className='default_button'>Save</button>
+            //     ] :
+            //         channel?.initiator?._id === user._id && activeTab === 'add' ? [
+            //             <button onClick={() => onCancel(null)} style={{ marginRight: "10px" }} className='default_button_outline'>Cancel</button>,
+            //             <button onClick={() => adduserChannel()} className='default_button'>Add</button>
+            //         ]
 
-                        : []
-            }
+            //             : []
+            // }
             title={channel?.name}
             width={500}
             className='chat_details_modal'
@@ -187,7 +190,7 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
             <Tabs centered activeKey={activeTab} onChange={(v) => setActiveTab(v)} >
                 <TabPane tab="About" key="about">
                     <div className="about">
-                    <li>
+                        <li>
                             <div className='title'>
                                 <label>Name</label>
                                 {
@@ -267,9 +270,9 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
                                     title='Are you sure to archive this channel?'
                                     okText="Yes"
                                     cancelText='No'
-                                    onConfirm={() => handleArchived()}
+                                    onConfirm={() => handleArchived(true)}
                                 >
-                                    <button  className='leave_button'>Archive Channel</button>
+                                    <button className='leave_button'>Archive Channel</button>
                                 </Popconfirm>
                             </li>
 
@@ -292,8 +295,8 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
                                             {
                                                 u._id === user._id ?
                                                     <span className='me'>(me)</span> :
-                                                    <button onClick={() => handleRemove(u._id)} className='remove'>
-                                                        Remove
+                                                    <button disabled={removingList.includes(u._id)} onClick={() => handleRemoveUser(u._id)} className='remove'>
+                                                         {removingList.includes(u._id) && <Spin/>} Remove
                                                     </button>
                                             }
 
@@ -314,7 +317,7 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
 
 
                         <div className='select_container'>
-                            {
+                            {/* {
                                 selectedUser.length > 0 && selectedUser.map((member, i) => (
                                     <div className='user_input_list' key={i}>
                                         <Avatar size={'small'} src={member.profilePicture || "/placeholder.jpg"} />
@@ -322,8 +325,8 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
                                         <FaRegTrashAlt onClick={() => handleRemoveSelected(member)} style={{ color: "red", marginLeft: "5px", cursor: "pointer" }} />
                                     </div>
                                 ))
-                            }
-                            <input placeholder='Search user' className='multi_select_input' onFocus={() => handleSearchUser()} onChange={(e) => handleSearchUser(e.target.value)} />
+                            } */}
+                            <input style={{width:"100%"}} placeholder='Search user' className='multi_select_input' onFocus={() => handleSearchUser()} onChange={(e) => handleSearchUser(e.target.value)} />
                         </div>
 
                         <div className='user_list_wraper'>
@@ -335,7 +338,8 @@ function ChannelDetailsModal({ channel, isVisible, onCancel,handleUpdateChat }) 
                                             <h3 className="name">{user.fullName}</h3>
                                             <span className="email">{user.email}</span>
                                         </div>
-                                        <button disabled={users.find(u => u._id === user._id)} onClick={() => handleAdd(user)} className='add_btn'>
+                                        <button disabled={users.find(u => u._id === user._id)||addingList.includes(user._id)} onClick={() => adduserChannel(user._id)} className='add_btn'>
+                                        {addingList.includes(user._id) && <Spin/>}
 
                                             {
                                                 users.find(u => u._id === user._id) ?

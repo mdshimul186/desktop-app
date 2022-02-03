@@ -3,7 +3,7 @@ import ChatList from '../components/chat/ChatList'
 import { useParams } from 'react-router-dom'
 import { socket } from '../helper/withAuth'
 import { useSelector, useDispatch } from 'react-redux'
-import { Avatar, Empty, message, Result, Spin, Upload } from 'antd';
+import { Avatar, Empty, message, notification, Result, Spin, Upload } from 'antd';
 import axios from 'axios'
 import { IoMdSend, IoIosAttach } from 'react-icons/io'
 import { FaAngleDown, FaDownload } from 'react-icons/fa'
@@ -11,35 +11,15 @@ import ChannelDetailsModal from '../components/chat/ChannelDetailsModal'
 import Message from '../components/chat/Message'
 import ReactQuill from 'react-quill'
 import placeholder from '../assets/placeholder.jpg'
+import QuillEditor from '../components/chat/TextQuill'
+import Thread from '../components/chat/Thread'
+import DeleteMessage from '../components/chat/DeleteMessage'
+import EditMessage from '../components/chat/EditMessage'
+import moment from 'moment'
 
 
-const modules = {
-    // #3 Add "image" to the toolbar
-    //toolbar: TOOLBAR_OPTIONS,
-    toolbar: {
-        container: "#toolbar",
-        // handlers: {
-        //   undo: undoChange,
-        //   redo: redoChange
-        // }
-    }
-};
 
-const formats = [
-    "header",
-    "bold",
-    "italic",
-    "underline",
-    "strike",
-    "blockquote",
-    "list",
-    "bullet",
-    "indent",
-    //"link",
-    "image",
-    "code-block"
-    //"imageBlot" // #5 Optinal if using custom formats
-];
+
 function ChatDetails() {
     const { user: profile } = useSelector(state => state.auth)
     const { chatMessages } = useSelector(state => state.chat)
@@ -55,16 +35,22 @@ function ChatDetails() {
     const [messages, setMessages] = useState([])
     const [messagesPending, setMessagesPending] = useState([])
     const [chat, setChat] = useState(null)
+    const [muteData, setMuteData] = useState(null)
     const [text, setText] = useState("")
     const [isTyping, setisTyping] = useState(false)
     const [files, setFiles] = useState([])
 
-    const [isSendingImage, setIsSendingImage] = useState(false)
     const [isSendingText, setIsSendingText] = useState(false)
     const [count, setCount] = useState(0)
     const [currentPage, setCurrentPage] = useState(1)
 
     const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false)
+
+    const [threadMessage, setThreadMessage] = useState(null)
+    const [editMessage, setEditMessage] = useState(null)
+    const [deleteMessage, setDeleteMessage] = useState(null)
+    
+   
 
     useEffect(() => {
         if (chats && params.chatid) {
@@ -81,8 +67,8 @@ function ChatDetails() {
                 }
                 // setMessages(prev => [...prev, data.message])
                 dispatch({
-                    type:"PUSH_MESSAGE",
-                    payload: {chat:data.chat,message:data.message}
+                    type: "PUSH_MESSAGE",
+                    payload: { chat: data.chat, message: data.message }
                 })
                 //console.log(data);
             })
@@ -95,9 +81,15 @@ function ChatDetails() {
             })
             socket.on("receive-update-message", data => {
                 dispatch({
-                    type:"UPDATE_MESSAGE",
-                    payload:{chat:data.chat,message:data.message}
+                    type: "UPDATE_MESSAGE",
+                    payload: { chat: data.chat, message: data.message }
                 })
+
+                if (threadMessage) {
+                    if (threadMessage._id === data.message._id) {
+                        setThreadMessage(prev => ({ ...prev, ...data.message }))
+                    }
+                }
             })
             return () => {
                 socket.off('receive');
@@ -119,9 +111,10 @@ function ChatDetails() {
         socket.emit("typing", { to: chat._id, istyping: false });
         //console.log('typing stopped');
     }
-    let handleKey = (e) => {
-
-        if (e.keyCode === 13  && !e.shiftKey) {
+  
+    let handleKey = (e,isOpenMention) => {
+       
+        if (e.keyCode === 13 && !e.shiftKey && !isOpenMention) {
             return sendMessage()
         }
         if (typing == false) {
@@ -137,10 +130,10 @@ function ChatDetails() {
 
     const fetchMore = (page) => {
         setIsFetching(true)
-        axios.get(`/chat/${params.chatid}/messages?page=${page+1}`)
+        axios.get(`/chat/${params.chatid}/messages?page=${page + 1}`)
             .then(res => {
-                setMessages(prev=>([...res.data.messages,...prev]))
-                setCurrentPage(page+1)
+                setMessages(prev => ([...res.data.messages, ...prev]))
+                setCurrentPage(page + 1)
                 setIsFetching(false)
             })
             .catch(err => {
@@ -152,6 +145,9 @@ function ChatDetails() {
 
     useEffect(() => {
         if (params.chatid) {
+            setMuteData(null)
+            setText("")
+            setThreadMessage(null)
             //setIsLoading(true)
             setError(null)
             //setChat(null)
@@ -160,7 +156,7 @@ function ChatDetails() {
             axios.get(`/chat/${params.chatid}/messages?page=${0}`)
                 .then(res => {
                     setChat(res.data.chat)
-
+                    setMuteData(res.data.muteData)
                     setCount(res.data.count)
                     dispatch({
                         type: "MARK_READ",
@@ -220,11 +216,13 @@ function ChatDetails() {
         }
         let filesData = successFiles.map(file => ({ name: file.name, type: file.type, size: file.size, url: file.response }))
 
-
+        //return console.log(replaceLast(text,"<p><br></p>",""));
+        //let regex = /(\<p><br></p>\b)(?!.*\b\1\b)/
+        //return console.log(text.replaceAll("<p><br></p>", ""));
         setIsSendingText(true)
         let data = {
             type: "text",
-            content: text,
+            content: text.replaceAll("<p><br></p>", ""),
             files: filesData
         }
         let randomId = Math.floor(Math.random() * (999999 - 1111) + 1111)
@@ -243,8 +241,8 @@ function ChatDetails() {
         axios.put(`/chat/sendmessage/${chat._id}`, data)
             .then(res => {
                 dispatch({
-                    type:"PUSH_MESSAGE",
-                    payload: {chat:chat?._id,message:res.data.message}
+                    type: "PUSH_MESSAGE",
+                    payload: { chat: chat?._id, message: res.data.message }
                 })
                 //setMessages(prev => [...prev, res.data.message])
                 dispatchLatest(res.data.message)
@@ -257,6 +255,7 @@ function ChatDetails() {
             .catch(err => {
                 setIsSendingText(false)
                 console.log(err);
+                notification.error({message:err?.response?.data?.error})
             })
     }
 
@@ -264,68 +263,34 @@ function ChatDetails() {
 
 
 
-  //scroll to last message automatically
-  let lastmsgref = useRef()
-    
+    //scroll to last message automatically
+    let lastmsgref = useRef()
 
-//   useEffect(() => {
-//       if (lastmsgref.current) {
-//           lastmsgref.current.scrollIntoView({
-//               behavior: "smooth",
-//               block: "end",
-//               inline: "nearest"
-//           })
-//       }
-//   },[lastmsgref,messages[messages.length-1]])
 
-const scrollIntoBottom = () => {
-    if (lastmsgref.current) {
-        lastmsgref.current.scrollIntoView({
-            behavior: "smooth",
-            block: "end",
-            inline: "nearest"
-        })
+    //   useEffect(() => {
+    //       if (lastmsgref.current) {
+    //           lastmsgref.current.scrollIntoView({
+    //               behavior: "smooth",
+    //               block: "end",
+    //               inline: "nearest"
+    //           })
+    //       }
+    //   },[lastmsgref,messages[messages.length-1]])
+
+    const scrollIntoBottom = () => {
+        if (lastmsgref.current) {
+            lastmsgref.current.scrollIntoView({
+                behavior: "smooth",
+                block: "end",
+                inline: "nearest"
+            })
+        }
     }
-}
 
 
 
 
-    const EditorToolbar = useCallback(
-        ({ handleSendText }) => (
-            <div id="toolbar">
 
-                <span className="ql-formats">
-                    <button className="ql-bold" />
-                    <button className="ql-italic" />
-                    <button className="ql-underline" />
-                    <button className="ql-strike" />
-                </span>
-                <span className="ql-formats">
-                    <button className="ql-list" value="ordered" />
-                    <button className="ql-list" value="bullet" />
-                    <button className="ql-blockquote" />
-                </span>
- 
-                <span className="ql-formats">
-                    <select className="ql-align" />
-                    <button className="ql-code-block" />
-                </span>
-                <span className="ql-formats">
-                </span>
-                {/* <span className="ql-formats">
-              <button className="ql-formula" />
-              
-               <button className="ql-clean" /> 
-            </span> */}
-                <span className="actions">
-                    <IoIosAttach style={{ marginRight: "10px" }} onClick={() => uploadRef.current.click()} className='icon' size={20} />
-                    <IoMdSend onClick={handleSendText} className='icon' size={20} />
-                </span>
-            </div>
-        ),
-        []
-    );
 
 
 
@@ -375,11 +340,17 @@ const scrollIntoBottom = () => {
 
     const handleUpdateMessage = (message) => {
         dispatch({
-            type:"UPDATE_MESSAGE",
-            payload:{chat:chat?._id,message}
+            type: "UPDATE_MESSAGE",
+            payload: { chat: chat?._id, message }
         })
 
         socket.emit("updatemessage", { chatid: chat?._id, message })
+
+        if (threadMessage) {
+            if (threadMessage._id === message._id) {
+                setThreadMessage(prev => ({ ...prev, ...message }))
+            }
+        }
     }
 
 
@@ -421,29 +392,32 @@ const scrollIntoBottom = () => {
                                     <div className="message_wapper">
                                         <div className='start_list'>
 
-                                        {
-                                                currentPage*30 < count  ?  <button disabled={isFetching} className='fetch_more' onClick={()=>fetchMore(currentPage)}> {isFetching ? <Spin/>:"fetch more"} </button>:
-                                                chat.isChannel ?
-                                                <>
-                                                    <Avatar style={{ background: "#062539" }} size={60} >{chat?.name}</Avatar>
-                                                    <p>This is the very begining of the <strong>{chat?.name}</strong> channel</p>
-                                                </>
-                                                :
-                                                <>
-                                                    <Avatar size={60} src={chat && findUser(chat.users)?.profilePicture || '/placeholder.jpg'} />
-                                                    <p>This is the very begining of the chat with <strong>{chat && findUser(chat.users)?.fullName}</strong></p>
-                                                </>
+                                            {
+                                                currentPage * 30 < count ? <button disabled={isFetching} className='fetch_more' onClick={() => fetchMore(currentPage)}> {isFetching ? <Spin /> : "fetch more"} </button> :
+                                                    chat.isChannel ?
+                                                        <>
+                                                            <Avatar style={{ background: "#062539" }} size={60} >{chat?.name}</Avatar>
+                                                            <p>This is the very begining of the <strong>{chat?.name}</strong> channel</p>
+                                                        </>
+                                                        :
+                                                        <>
+                                                            <Avatar size={60} src={chat && findUser(chat.users)?.profilePicture || '/placeholder.jpg'} />
+                                                            <p>This is the very begining of the chat with <strong>{chat && findUser(chat.users)?.fullName}</strong></p>
+                                                        </>
                                             }
 
                                         </div>
                                         <ul className='list_wrapper'>
 
-                                        {
+                                            {
                                                 chatMessages[params.chatid] &&
-                                                [...messages, ...chatMessages[params.chatid]||undefined, ...messagesPending].map((message, index) => {
-                                                    const lastmessage =  [...messages, ...chatMessages[params.chatid]||undefined, ...messagesPending].length - 1 === index
+                                                [...messages, ...chatMessages[params.chatid] || undefined, ...messagesPending].map((message, index) => {
+                                                    const lastmessage = [...messages, ...chatMessages[params.chatid] || undefined, ...messagesPending].length - 1 === index
                                                     return (
                                                         <Message
+                                                            setDeleteMessage={setDeleteMessage}
+                                                            setEditMessage={setEditMessage}
+                                                            setThreadMessage={setThreadMessage}
                                                             lastmessage={lastmessage}
                                                             ref={lastmessage ? lastmsgref : null} key={index}
                                                             message={message}
@@ -464,18 +438,22 @@ const scrollIntoBottom = () => {
                                         </ul>
                                     </div>
                                     {
-                                        chat && !chat.readOnly &&
-                                        <div className="input_wrapper">
-                                            <div className="text-editor">
+                                        muteData && muteData.isMuted ?
+                                            <p>
+                                                {
+                                                    muteData?.isMuted &&
+                                                    <p style={{ color: "red", textAlign: "center", fontSize: "20px", margin: "20px 0", fontWeight: "bold" }}>
+                                                        You have been muted from this channel
+                                                        {
+                                                            muteData?.date && <> - untill ({moment(muteData?.date).format("D MMM, YYYY HH:MM a")})</>
+                                                        }
 
-                                                <EditorToolbar handleSendText={() => sendMessage()} />
-                                                <ReactQuill
-                                                    value={text}
-                                                    onChange={value => setText(value)}
-                                                    onKeyDown={handleKey}
-                                                    modules={modules}
-                                                    formats={formats}
-                                                />
+                                                    </p>
+
+                                                }
+                                            </p> :
+                                            chat && !chat.readOnly &&
+                                            <div className="input_wrapper">
                                                 <Upload
                                                     showUploadList={{ showPreviewIcon: false }}
                                                     maxCount={8}
@@ -488,9 +466,18 @@ const scrollIntoBottom = () => {
                                                 >
                                                     <button style={{ display: "none" }} ref={uploadRef} ></button>
                                                 </Upload>
+                                                <QuillEditor
+                                               
+                                                    source="chat"
+                                                    className="chat"
+                                                    onKeyDown={handleKey}
+                                                    text={text}
+                                                    handleChange={val => setText(val)}
+                                                    sendText={() => sendMessage()}
+                                                    users={chat?.users}
+                                                    onUploadClick={() => uploadRef.current.click()}
+                                                />
                                             </div>
-
-                                        </div>
                                     }
 
                                 </> :
@@ -501,15 +488,47 @@ const scrollIntoBottom = () => {
                 </div>
 
                 {
-                    chat && <ChannelDetailsModal 
-                    channel={chat} 
-                    isVisible={isDetailsModalVisible} 
-                    handleUpdateChat={(chat)=>handleUpdateChat(chat)}
-                    onCancel={(chat) => {
-                        chat && setChat(chat)
-                        // console.log(chat);
-                        setIsDetailsModalVisible(false);
-                    }} />
+                    chat && threadMessage &&
+                    <Thread
+                        handleUpdateMessage={(message) =>
+                            handleUpdateMessage(message)}
+                        message={threadMessage}
+                        chat={chat}
+                        removeThread={() => setThreadMessage(null)}
+                    />
+                }
+
+                {
+                    chat && <ChannelDetailsModal
+                        channel={chat}
+                        isVisible={isDetailsModalVisible}
+                        handleUpdateChat={(chat) => handleUpdateChat(chat)}
+                        onCancel={(chat) => {
+                            chat && setChat(chat)
+                            // console.log(chat);
+                            setIsDetailsModalVisible(false);
+                        }} />
+                }
+
+                {
+                    editMessage && chat &&
+                    <EditMessage
+                        chat={chat}
+                        message={editMessage}
+                        handleCloseEdit={() => setEditMessage(null)}
+                        handleUpdateMessage={(message) =>
+                            handleUpdateMessage(message)}
+                    />
+                }
+
+                {
+                    deleteMessage && chat &&
+                    <DeleteMessage
+                        handleUpdateMessage={(message) =>
+                            handleUpdateMessage(message)}
+                        message={deleteMessage}
+                        cancelDeleteModal={() => setDeleteMessage(null)}
+                    />
                 }
 
             </ChatList>
