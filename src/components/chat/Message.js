@@ -3,7 +3,7 @@ import React, { forwardRef, useState } from 'react'
 import { FaDownload } from 'react-icons/fa'
 import { AiOutlineMessage, AiOutlineEdit, AiOutlineDelete } from "react-icons/ai";
 import { MdOutlineAddReaction } from 'react-icons/md'
-import parse from 'html-react-parser'
+import parse, { attributesToProps, domToReact } from 'html-react-parser'
 import { Image, Dropdown, notification, Tooltip } from 'antd'
 import mime from 'mime'
 import docImage from '../../assets/doc.png'
@@ -18,6 +18,7 @@ import botImage from '../../assets/bot.png'
 import axios from "axios";
 import Picker from 'emoji-picker-react'
 import { useSelector } from 'react-redux'
+import { replaceMentionToNode } from "../../helper/utilitis";
 
 
 const images = ["image/bmp", "image/cis-cod", "image/gif", "image/jpeg", "image/pipeg", "image/x-xbitmap", "image/png"]
@@ -78,6 +79,31 @@ const Message = forwardRef((props, ref) => {
             native
         />
     );
+
+    const options = {
+        replace: ({ attribs, children ,name}) => {
+          if (!attribs) {
+            return;
+          }
+      
+          if (name === 'a') {
+            const props = attributesToProps(attribs);
+            return <a onClick={e=>{
+                e.preventDefault();
+                //console.log(attribs);
+                window?.electron?.openExternalLink?.open(attribs?.href)
+            }} {...props}>{domToReact(children, options)}</a>;
+          }
+      
+        //   if (attribs.class === 'prettify') {
+        //     return (
+        //       <span style={{ color: 'hotpink' }}>
+        //         {domToReact(children, options)}
+        //       </span>
+        //     );
+        //   }
+        }
+      };
 
     return (
         message.type === "delete" ? (
@@ -161,7 +187,7 @@ const Message = forwardRef((props, ref) => {
                             }
                         </div>
                         <div className="text">
-                            {parse(message.content)}
+                            {parse(replaceMentionToNode(message.content),options)}
                             {
                                 message?.edited && <span className="edited">(edited)</span>
                             }
@@ -250,7 +276,7 @@ const Message = forwardRef((props, ref) => {
                                                                 <span>{moment(reply.createdAt).fromNow()}</span>
                                                             </div>
                                                             <div className="text">
-                                                                {parse(reply.content)}
+                                                                {parse(replaceMentionToNode(reply.content),options)}
                                                             </div>
                                                         </div>
 

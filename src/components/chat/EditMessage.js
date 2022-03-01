@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState ,useEffect} from 'react';
 import { Modal, notification } from 'antd'
 import axios from 'axios';
 import QuillEditor from './TextQuill'
+import {convertLink, parseMentionToEdit, replaceNodeToMention} from '../../helper/utilitis'
+
 
 
 function EditMessage({ message, chat, handleCloseEdit, handleUpdateMessage }) {
-    const [text, setText] = useState(message?.content || "")
+    const [text, setText] = useState( "")
     const [isEditing, setIsEditing] = useState(false)
+
+
+    useEffect(() => {
+        if(message.content){
+         
+          let newString = parseMentionToEdit(message?.content||"");
+          setText(newString)
+        }
+      }, [message])
 
     let handleKey = (e,isOpenMention) => {
         // if (e.keyCode === 13 && !e.shiftKey && !isOpenMention) {
@@ -18,8 +29,9 @@ function EditMessage({ message, chat, handleCloseEdit, handleUpdateMessage }) {
         if (!text) {
             return notification.error({ message: "Please write something" })
         }
+        let textFiltered =  text.replaceAll("<p><br></p>", "")
         let data = {
-            content: text.replaceAll("<p><br></p>", "")
+            content: convertLink(replaceNodeToMention(textFiltered))
         }
         setIsEditing(true)
         axios.patch(`/chat/update/message/${message?._id}`, data)

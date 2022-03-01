@@ -29,7 +29,7 @@ const chatReducer = (state = init, action) => {
                 chats: action.payload,
             }
         case "UPDATE_CHATS":
-            handleChatNoti(action.payload)
+            // handleChatNoti(action.payload)
             let array = [...state.chats]
             let index = array.findIndex((chat) => chat._id === action.payload._id)
             if (index === -1) {

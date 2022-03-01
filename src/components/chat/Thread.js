@@ -5,6 +5,7 @@ import Message from './Message';
 import { Upload, Divider, notification } from 'antd'
 import axios from 'axios'
 import QuillEditor from './TextQuill'
+import { convertLink, replaceNodeToMention } from '../../helper/utilitis';
 
 function Thread({ chat, message, handleUpdateMessage, removeThread }) {
 
@@ -23,9 +24,10 @@ function Thread({ chat, message, handleUpdateMessage, removeThread }) {
             return sendMessage()
         }
     }
+    let filtered = text.replaceAll("<p><br></p>", "")
     const sendMessage = () => {
         let data = {
-            content: text.replaceAll("<p><br></p>", "")
+            content: convertLink(replaceNodeToMention(filtered)),
         }
         setText("")
         axios.post(`/chat/sendreply/${message._id}`, data)

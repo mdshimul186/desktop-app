@@ -2,6 +2,8 @@ import React, { Component } from 'react'
 import ReactQuill, { Quill } from 'react-quill'
 import QuillMention from 'quill-mention'
 import { IoMdSend, IoIosAttach } from 'react-icons/io'
+
+
 let atValues = [];
 const hashValues = [
     { id: 3, value: 'Fredrik Sundqvist 2' },
@@ -23,8 +25,8 @@ export default class Editor extends Component {
         // You don't have to do this check first, but it can help prevent an unneeded render
         if (nextProps.users !== this.state.atValues) {
             //console.log(nextProps.users);
-            let values = nextProps.users.map(u => ({ id: u._id, value: u.fullName, email: u.email, link: `#${u._id}` }))
-            atValues = [...values, { id: "all_member", value: "all member", link: `#all_member` }]
+            let values = nextProps.users.map(u => ({ id: u._id, value: u.fullName, email: u.email }))
+            atValues = [...values, { id: "all_member", value: "all member" }]
             this.setState({ atValues: nextProps.users });
         }
     }
@@ -134,6 +136,7 @@ export default class Editor extends Component {
                                 container: `.${className}`,
                             },
                             mention: this.mentionModule,
+                           
                             
                         }} 
                         onKeyDown={(e)=>onKeyDown(e,this.state.isOpenMention)}

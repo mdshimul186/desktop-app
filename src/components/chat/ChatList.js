@@ -7,6 +7,7 @@ import { useHistory, useParams } from 'react-router-dom'
 import OnlineUsersList from './OnlineUsers'
 import placeholder from '../../assets/placeholder.jpg'
 import bot from '../../assets/bot.png'
+import { replaceMentionToNode } from '../../helper/utilitis'
 
 
 
@@ -303,7 +304,7 @@ function ChatList({ children, isListPage }) {
                                                                     </>
                                                                     :
                                                                     <span className='text'>
-                                                                        {chat.latestMessage.sender?.firstName}: {truncateString(getText(chat.latestMessage.content), 10)}                                                               </span>
+                                                                        {chat.latestMessage.sender?.firstName}: {truncateString(getText(replaceMentionToNode(chat.latestMessage.content)), 10)}                                                               </span>
                                                         }
                                                     </p>
                                                 </div>

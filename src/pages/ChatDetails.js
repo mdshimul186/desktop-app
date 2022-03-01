@@ -16,6 +16,7 @@ import Thread from '../components/chat/Thread'
 import DeleteMessage from '../components/chat/DeleteMessage'
 import EditMessage from '../components/chat/EditMessage'
 import moment from 'moment'
+import { convertLink, replaceNodeToMention } from '../helper/utilitis'
 
 
 
@@ -219,10 +220,11 @@ function ChatDetails() {
         //return console.log(replaceLast(text,"<p><br></p>",""));
         //let regex = /(\<p><br></p>\b)(?!.*\b\1\b)/
         //return console.log(text.replaceAll("<p><br></p>", ""));
+        let textFiltered = text.replaceAll("<p><br></p>", "")
         setIsSendingText(true)
         let data = {
             type: "text",
-            content: text.replaceAll("<p><br></p>", ""),
+            content: convertLink(replaceNodeToMention(textFiltered)),
             files: filesData
         }
         let randomId = Math.floor(Math.random() * (999999 - 1111) + 1111)

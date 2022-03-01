@@ -5,10 +5,12 @@ import Chat from "./pages/Chat";
 import ProtectedRoute from "./helper/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import ChatDetails from "./pages/ChatDetails";
-import { useEffect } from "react";
+import { useEffect,useState } from "react";
 import {useDispatch} from 'react-redux'
+import {handleMessageNoti} from './helper/utilitis'
 
 function App({userData}) {
+  const [audio] = useState(new Audio(require('./assets/noti.wav')));
   let history = useHistory()
   const dispatch = useDispatch()
   if(!userData){
@@ -17,12 +19,24 @@ function App({userData}) {
     history.push('/chat')
   }
 
+  // const handleChatNoti=(chat)=>{
+  //   chat.latestMessage?.content &&
+  //   window.electron.notificationApi.sendNotification(
+  //     {
+  //       title: chat.isChannel ? chat.name + ": " + chat?.latestMessage?.sender?.fullName : chat?.latestMessage?.sender?.fullName,
+  //       body:htmlToStr(chat.latestMessage?.content)
+  //     }
+  //       )
+  // }
 
 
   useEffect(() => {
     if (socket) {
         socket.on("newmessage", data => {
-         
+        let result =  handleMessageNoti(data.chat,userData?._id)
+        if(result?.isSent) {
+          audio.play()
+         }
             dispatch({
                 type: "UPDATE_CHATS",
                 payload: data.chat
